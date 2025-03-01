@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+.idea/
+*.iml
+*.pydevproject
+*.pytproj
+.pytest_cache/
