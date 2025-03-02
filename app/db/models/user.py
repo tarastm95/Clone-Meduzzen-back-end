@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -12,7 +13,10 @@ class User(Base):
     bio = Column(String, nullable=True)
     profile_picture = Column(String, nullable=True)
 
-    friends = relationship("Friend", back_populates="user")
+    friends = relationship(
+        "Friend", back_populates="user", foreign_keys=lambda: [Friend.user_id]
+    )
+
 
 class Friend(Base):
     __tablename__ = "friends"

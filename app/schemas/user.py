@@ -1,18 +1,22 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
 from typing import Optional, List
 
+
 class UserBase(BaseModel):
     email: EmailStr
     is_active: bool = True
     bio: Optional[str] = None
     profile_picture: Optional[HttpUrl] = None
 
+
 class SignUpRequest(UserBase):
     password: str
+
 
 class SignInRequest(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserUpdateRequest(BaseModel):
     email: Optional[EmailStr] = None
@@ -21,9 +25,11 @@ class UserUpdateRequest(BaseModel):
     bio: Optional[str] = None
     profile_picture: Optional[HttpUrl] = None
 
+
 class FriendSchema(BaseModel):
     id: int
     friend_id: int
+
 
 class UserDetailResponse(UserBase):
     id: int
@@ -31,6 +37,7 @@ class UserDetailResponse(UserBase):
 
     class Config:
         orm_mode = True
+
 
 class UsersListResponse(BaseModel):
     users: List[UserDetailResponse]

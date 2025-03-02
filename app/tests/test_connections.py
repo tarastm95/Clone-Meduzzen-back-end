@@ -4,17 +4,17 @@ import redis.asyncio as redis
 from app.core.config import db_settings, redis_settings
 
 POSTGRES_CONFIG = {
-    "user": db_settings.postgres_user,
-    "password": db_settings.postgres_password,
-    "database": db_settings.postgres_db,
-    "host": db_settings.DATABASE_URL.split("@")[1].split(":")[0],
-    "port": 5432,
+    "user": db_settings.POSTGRES_USER,
+    "password": db_settings.POSTGRES_PASSWORD,
+    "database": db_settings.POSTGRES_DB,
+    "host": db_settings.POSTGRES_HOST,
+    "port": db_settings.DB_PORT,
 }
 
 REDIS_CONFIG = {
-    "host": redis_settings.REDIS_URL.split("//")[1].split(":")[0],
-    "port": 6379,
-    "db": 0,
+    "host": redis_settings.REDIS_HOST,
+    "port": redis_settings.REDIS_PORT,
+    "db": redis_settings.REDIS_DB,
 }
 
 

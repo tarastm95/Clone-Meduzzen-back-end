@@ -191,6 +191,11 @@ docker-compose run --rm app alembic upgrade head
 docker-compose exec db psql -U postgres -d meduzzen_db -c "\dt"
 ```
 
+#### **Running Tests**
+```sh
+docker-compose run --rm app pytest
+```
+
 ---
 
 ### **Summary**
