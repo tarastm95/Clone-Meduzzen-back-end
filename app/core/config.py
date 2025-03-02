@@ -18,8 +18,18 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        """Asynchronous URL for FastAPI"""
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
+            f"{self.DB_PORT}/{self.POSTGRES_DB}"
+        )
+
+    @property
+    def DATABASE_URL_SYNC(self) -> str:
+        """Synchronous URL for Alembic"""
+        return (
+            f"postgresql://{self.POSTGRES_USER}:"
             f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
             f"{self.DB_PORT}/{self.POSTGRES_DB}"
         )
