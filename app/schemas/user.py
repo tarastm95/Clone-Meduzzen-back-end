@@ -1,16 +1,23 @@
-from pydantic import BaseModel, EmailStr, HttpUrl
+from pydantic import BaseModel, EmailStr, HttpUrl, Field, ConfigDict
 from typing import Optional, List
 
 
+class Friend(BaseModel):
+    id: int
+    name: str
+
+
 class UserBase(BaseModel):
+    name: str
     email: EmailStr
-    is_active: bool = True
+    age: int
     bio: Optional[str] = None
-    profile_picture: Optional[HttpUrl] = None
+    profile_picture: Optional[HttpUrl] = Field(None, alias="profilePicture")
 
 
 class SignUpRequest(UserBase):
     password: str
+    is_active: bool = False
 
 
 class SignInRequest(BaseModel):
@@ -19,24 +26,19 @@ class SignInRequest(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
+    name: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    is_active: Optional[bool] = None
+    age: Optional[int] = None
     bio: Optional[str] = None
-    profile_picture: Optional[HttpUrl] = None
-
-
-class FriendSchema(BaseModel):
-    id: int
-    friend_id: int
+    profile_picture: Optional[HttpUrl] = Field(None, alias="profilePicture")
 
 
 class UserDetailResponse(UserBase):
     id: int
-    friends: List[FriendSchema] = []
+    friends: List[Friend]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class UsersListResponse(BaseModel):

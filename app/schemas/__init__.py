@@ -3,7 +3,6 @@ from .user import (
     SignUpRequest,
     SignInRequest,
     UserUpdateRequest,
-    FriendSchema,
     UserDetailResponse,
     UsersListResponse,
 )
@@ -13,7 +12,6 @@ __all__ = [
     "SignUpRequest",
     "SignInRequest",
     "UserUpdateRequest",
-    "FriendSchema",
     "UserDetailResponse",
     "UsersListResponse",
 ]

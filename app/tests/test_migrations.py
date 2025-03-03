@@ -1,5 +1,3 @@
-# test_app.py
-
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import create_engine
@@ -19,24 +17,29 @@ from app.db.database import Base
 
 def test_signup_valid():
     data = {
+        "name": "Test User",
         "email": "user@example.com",
+        "age": 30,
         "password": "secret123",
-        "is_active": True,
         "bio": "Test bio",
-        "profile_picture": "http://example.com/pic.jpg",
+        "profilePicture": "http://example.com/pic.jpg",
+        "is_active": True,
     }
     req = SignUpRequest(**data)
-    # Перевірка всіх полів за допомогою порівняння з вхідними даними
+    assert req.name == data["name"]
     assert req.email == data["email"]
+    assert req.age == data["age"]
     assert req.password == data["password"]
-    assert req.is_active is True
     assert req.bio == data["bio"]
-    assert str(req.profile_picture) == data["profile_picture"]
+    assert req.is_active is True
+    assert str(req.profile_picture) == data["profilePicture"]
 
 
 def test_signup_invalid_email():
     with pytest.raises(ValidationError):
-        SignUpRequest(email="invalid-email", password="secret123")
+        SignUpRequest(
+            name="Test User", email="invalid-email", age=25, password="secret123"
+        )
 
 
 def test_signin():
@@ -50,29 +53,37 @@ def test_user_update_optional():
     assert req.bio == "New bio"
     assert req.email is None
     assert req.password is None
+    assert req.name is None
+    assert req.age is None
 
 
 def test_user_detail_response():
     data = {
         "id": 1,
+        "name": "Test User",
         "email": "user@example.com",
-        "is_active": True,
+        "age": 30,
         "bio": "Test bio",
-        "profile_picture": "http://example.com/pic.jpg",
+        "profilePicture": "http://example.com/pic.jpg",
         "friends": [],
     }
     detail = UserDetailResponse(**data)
     assert detail.id == 1
-    assert str(detail.profile_picture) == data["profile_picture"]
+    assert detail.name == data["name"]
+    assert detail.email == data["email"]
+    assert detail.age == data["age"]
+    assert detail.bio == data["bio"]
+    assert str(detail.profile_picture) == data["profilePicture"]
 
 
 def test_users_list_response():
     detail = UserDetailResponse(
         id=1,
+        name="Test User",
         email="user@example.com",
-        is_active=True,
+        age=30,
         bio="Test bio",
-        profile_picture="http://example.com/pic.jpg",
+        profilePicture="http://example.com/pic.jpg",
         friends=[],
     )
     response = UsersListResponse(users=[detail], total=1)
@@ -99,7 +110,9 @@ def db_session():
 
 def test_create_user(db_session):
     user = User(
+        name="Test User",
         email="user1@example.com",
+        age=30,
         hashed_password="hashedsecret",
         is_active=True,
         bio="Bio for user1",
@@ -110,17 +123,28 @@ def test_create_user(db_session):
     db_user = db_session.query(User).filter_by(email="user1@example.com").first()
     assert db_user is not None
     assert db_user.email == "user1@example.com"
+    assert db_user.name == "Test User"
+    assert db_user.age == 30
     assert db_user.bio == "Bio for user1"
+    assert db_user.profile_picture == "http://example.com/user1.jpg"
 
 
 def test_unique_email(db_session):
     user = User(
-        email="duplicate@example.com", hashed_password="passdup", is_active=True
+        name="Unique User",
+        email="duplicate@example.com",
+        age=25,
+        hashed_password="passdup",
+        is_active=True,
     )
     db_session.add(user)
     db_session.commit()
     dup = User(
-        email="duplicate@example.com", hashed_password="anotherpass", is_active=True
+        name="Another User",
+        email="duplicate@example.com",
+        age=26,
+        hashed_password="anotherpass",
+        is_active=True,
     )
     db_session.add(dup)
     with pytest.raises(IntegrityError):

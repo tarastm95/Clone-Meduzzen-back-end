@@ -196,6 +196,23 @@ docker-compose exec db psql -U postgres -d meduzzen_db -c "\dt"
 docker-compose run --rm app pytest
 ```
 
+###  **CRUD Functionality**
+- **Retrieve all users** (`GET /users/`)
+- **Retrieve a user by ID** (`GET /users/{user_id}`)
+- **Create a new user (ensure passwords are stored as hashes)** (`POST /users/`)
+- **Update an existing user's details** (`PUT /users/{user_id}`)
+- **Delete a user from the database** (`DELETE /users/{user_id}`)
+
+---
+
+### **Error Handling and Logging**
+- **Added:** Comprehensive error handling for all CRUD operations.
+- **Added:** Logging of database modification operations to track changes and issues.
+
+### **Enhancements**
+- **Added:** Pagination when retrieving the user list to improve scalability.
+- **Added:** Unit tests to verify CRUD functionality.
+
 ---
 
 ### **Summary**
@@ -204,4 +221,19 @@ docker-compose run --rm app pytest
 - **Pydantic schemas have been updated for working with users and friends.**
 - **The first migration has been generated and applied.**
 - **The correctness of created tables in the database has been verified.**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

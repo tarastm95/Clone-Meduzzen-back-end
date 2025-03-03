@@ -5,3 +5,5 @@ venv/
 poetry.lock
 .idea/
 .pytest_cache/
+alembic/__pycache__/
+alembic/versions/*.pyc
