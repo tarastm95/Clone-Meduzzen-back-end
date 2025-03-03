@@ -7,13 +7,16 @@ from app.core.logger import logger
 
 app = FastAPI(title="Backend API")
 
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Backend API is starting...")
 
+
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Backend API is shutting down...")
+
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -21,6 +24,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         logger.info(f"Response status: {response.status_code}")
         return response
+
 
 app.add_middleware(LoggingMiddleware)
 
