@@ -1,21 +1,20 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routers.database import postgres, redis
-from app.routers import health, user
+from app.routers import health
 from app.core.logger import logger
 
-app = FastAPI(title="Backend API")
 
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     logger.info("Backend API is starting...")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     logger.info("Backend API is shutting down...")
+
+
+app = FastAPI(title="Backend API", lifespan=lifespan)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -39,6 +38,5 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(redis.router)
 app.include_router(postgres.router)
-app.include_router(user.router)
 
 logger.info("Backend API has been initialized.")
