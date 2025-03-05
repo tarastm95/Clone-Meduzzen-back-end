@@ -38,7 +38,7 @@ This command:
 
 After starting the container, the API will be available at:
 
-http://localhost:8000
+[http://localhost:8000](http://localhost:8000)
 
 This is the Swagger UI for testing the API.
 
@@ -73,8 +73,7 @@ The application integrates Redis for caching and session management.
 
 ### Managing Development Dependencies
 
-Development dependencies (e.g., testing libraries) are grouped under `[tool.poetry.group.dev.dependencies]`.
-To add new development dependencies, use:
+Development dependencies (e.g., testing libraries) are grouped under `[tool.poetry.group.dev.dependencies]`. To add new development dependencies, use:
 
 ```bash
 poetry add --group dev <package_name>
@@ -92,109 +91,39 @@ This will execute all tests in your tests folder, displaying the results. If you
 
 ---
 
-### **SQLAlchemy Models**
+## Database Migrations with Alembic
 
-The file `app/db/models/user.py` contains models for users and friends:
-```python
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
-from app.db.database import Base
+### **Initializing Alembic**
 
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
-    bio = Column(String, nullable=True)
-    profile_picture = Column(String, nullable=True)
-
-    friends = relationship("Friend", back_populates="user")
-
-class Friend(Base):
-    __tablename__ = "friends"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    friend_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
-    user = relationship("User", back_populates="friends", foreign_keys=[user_id])
-    friend = relationship("User", foreign_keys=[friend_id])
-```
-
----
-
-### **Pydantic Schemas**
-
-The file `app/schemas/user.py` contains schemas for validation and serialization:
-```python
-from pydantic import BaseModel, EmailStr, HttpUrl
-from typing import Optional, List
-
-class UserBase(BaseModel):
-    email: EmailStr
-    is_active: bool = True
-    bio: Optional[str] = None
-    profile_picture: Optional[HttpUrl] = None
-
-class SignUpRequest(UserBase):
-    password: str
-
-class SignInRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class UserUpdateRequest(BaseModel):
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
-    is_active: Optional[bool] = None
-    bio: Optional[str] = None
-    profile_picture: Optional[HttpUrl] = None
-
-class FriendSchema(BaseModel):
-    id: int
-    friend_id: int
-
-class UserDetailResponse(UserBase):
-    id: int
-    friends: List[FriendSchema] = []
-    class Config:
-        orm_mode = True
-
-class UsersListResponse(BaseModel):
-    users: List[UserDetailResponse]
-    total: int
-```
-
----
-
-### **Alembic Configuration**
-
-#### **Initializing Alembic**
 ```sh
 docker-compose run --rm app alembic init alembic
 ```
 
-#### **Creating the First Migration**
+### **Creating the First Migration**
+
 ```sh
 docker-compose run --rm app alembic revision --autogenerate -m "Create users and friends tables"
 ```
 
-#### **Applying Migrations**
+### **Applying Migrations**
+
 ```sh
 docker-compose run --rm app alembic upgrade head
 ```
 
-#### **Checking Tables in the Database**
+### **Checking Tables in the Database**
+
 ```sh
 docker-compose exec db psql -U postgres -d meduzzen_db -c "\dt"
 ```
 
-#### **Running Tests**
+### **Running Tests**
+
 ```sh
 docker-compose run --rm app pytest
 ```
+
+---
 
 ###  **CRUD Functionality**
 - **Retrieve all users** (`GET /users/`)

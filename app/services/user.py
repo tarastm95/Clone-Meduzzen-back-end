@@ -95,7 +95,7 @@ async def update_user(db: AsyncSession, user_id: int, user_data: UserUpdateReque
         logger.error("Update failed: User with id=%s not found", user_id)
         raise HTTPException(status_code=404, detail="User not found")
 
-    update_data = user_data.dict(exclude_unset=True)
+    update_data = user_data.model_dump(exclude_unset=True)
 
     if "profile_picture" in update_data and update_data["profile_picture"] is not None:
         update_data["profile_picture"] = str(update_data["profile_picture"])
