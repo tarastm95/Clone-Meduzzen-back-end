@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routers.database import postgres, redis
-from app.routers import health, user
+from app.routers import health, user, auth0, auth
 from app.core.logger import logger
 
 
@@ -26,7 +26,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(LoggingMiddleware)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,5 +38,7 @@ app.include_router(health.router)
 app.include_router(redis.router)
 app.include_router(postgres.router)
 app.include_router(user.router)
+app.include_router(auth0.router)
+app.include_router(auth.router)
 
 logger.info("Backend API has been initialized.")

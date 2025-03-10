@@ -15,10 +15,11 @@ class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    auth0_sub = Column(String, unique=True, nullable=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    age = Column(Integer, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    age = Column(Integer, nullable=True)
+    hashed_password = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     bio = Column(String, nullable=True)
     profile_picture = Column(String, nullable=True)
@@ -31,3 +32,18 @@ class User(TimestampMixin, Base):
         backref="user_friends",
         lazy="selectin",
     )
+
+
+class Auth0User(Base):
+    __tablename__ = "auth0_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    auth0_sub = Column(String, unique=True, nullable=False)
+    email_verified = Column(Boolean, default=False)
+    updated_at = Column(String, nullable=True)
+    sid = Column(String, nullable=True)
+
+    user = relationship("User", backref="auth0_data", lazy="joined")

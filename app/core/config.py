@@ -1,9 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from typing import Optional
 
 
 class AppSettings(BaseSettings):
-    APP_NAME: str = Field(default="Meduzzen-back-end")
+    APP_NAME: str = Field(
+        default="Meduzzen-back-end", json_schema_extra={"env": "APP_NAME"}
+    )
     DEBUG: bool = Field(default=True)
 
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
@@ -18,7 +21,6 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        """Asynchronous URL for FastAPI"""
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:"
             f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
@@ -27,7 +29,6 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
-        """Synchronous URL for Alembic"""
         return (
             f"postgresql://{self.POSTGRES_USER}:"
             f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
@@ -49,6 +50,38 @@ class RedisSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
 
+class Auth0Settings(BaseSettings):
+    AUTH0_DOMAIN: str
+    AUTH0_CLIENT_ID: str
+    AUTH0_CLIENT_SECRET: str
+    AUTH0_AUDIENCE: str = ""
+    AUTH0_REDIRECT_URI: str = "http://localhost:8000/auth0/token"
+
+    @property
+    def AUTH0_AUTHORIZATION_ENDPOINT(self) -> str:
+        return f"https://{self.AUTH0_DOMAIN}/authorize"
+
+    @property
+    def AUTH0_TOKEN_ENDPOINT(self) -> str:
+        return f"https://{self.AUTH0_DOMAIN}/oauth/token"
+
+    @property
+    def AUTH0_JWKS_ENDPOINT(self) -> str:
+        return f"https://{self.AUTH0_DOMAIN}/.well-known/jwks.json"
+
+    model_config = SettingsConfigDict(env_file=".env", extra="allow")
+
+
+class SecuritySettings(BaseSettings):
+    JWT_SECRET_KEY: str = Field(..., json_schema_extra={"env": "JWT_SECRET_KEY"})
+    JWT_ALGORITHM: str = Field(default="HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
+
+    model_config = SettingsConfigDict(env_file=".env", extra="allow")
+
+
 app_settings = AppSettings()
 db_settings = DatabaseSettings()
 redis_settings = RedisSettings()
+auth0_settings = Auth0Settings()
+security_settings = SecuritySettings()

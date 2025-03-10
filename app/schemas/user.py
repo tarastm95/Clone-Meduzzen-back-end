@@ -10,7 +10,7 @@ class Friend(BaseModel):
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    age: int
+    age: Optional[int]
     bio: Optional[str] = None
     profile_picture: Optional[HttpUrl] = Field(None, alias="profilePicture")
 
