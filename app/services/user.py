@@ -6,7 +6,6 @@ from app.schemas.user import (
     UserDetailResponse,
     UserUpdateRequest,
     SignUpRequest,
-    Friend,
     UsersListResponse,
 )
 from passlib.context import CryptContext
@@ -23,6 +22,7 @@ class UserService:
         self.db = db
 
     async def get_users(self, skip: int = 0, limit: int = 10) -> UsersListResponse:
+        logger.info("Fetching users with skip=%s and limit=%s", skip, limit)
         result = await self.db.execute(
             select(User).options(selectinload(User.friends)).offset(skip).limit(limit)
         )
@@ -31,32 +31,30 @@ class UserService:
         total_result = await self.db.execute(select(User))
         total = len(total_result.scalars().all())
 
+        logger.info("Fetched %s users out of total %s", len(users), total)
         return UsersListResponse(users=users, total=total)
 
     async def get_user(self, user_id: int) -> UserDetailResponse:
+        logger.info("Fetching user with id=%s", user_id)
         result = await self.db.execute(
             select(User).options(selectinload(User.friends)).filter(User.id == user_id)
         )
         user = result.scalars().first()
 
         if not user:
+            logger.error("User with id=%s not found", user_id)
             raise HTTPException(status_code=404, detail="User not found")
 
-        return UserDetailResponse(
-            id=user.id,
-            name=user.name,
-            email=user.email,
-            age=user.age,
-            bio=user.bio,
-            profile_picture=user.profile_picture,
-            friends=[Friend(id=friend.id, name=friend.name) for friend in user.friends],
-        )
+        logger.info("User with id=%s successfully fetched", user_id)
+        return UserDetailResponse.model_validate(user)
 
     async def create_user(self, user_data: SignUpRequest) -> User:
+        logger.info("Creating user with email=%s", user_data.email)
         existing_user = await self.db.execute(
             select(User).filter(User.email == user_data.email)
         )
         if existing_user.scalars().first():
+            logger.warning("User creation failed: email %s already exists", user_data.email)
             raise HTTPException(
                 status_code=400, detail="User with this email already exists"
             )
@@ -78,21 +76,21 @@ class UserService:
         await self.db.commit()
         await self.db.refresh(db_user)
 
+        logger.info("User with email=%s created successfully with id=%s", user_data.email, db_user.id)
         return db_user
 
     async def update_user(self, user_id: int, user_data: UserUpdateRequest) -> User:
+        logger.info("Updating user with id=%s", user_id)
         result = await self.db.execute(select(User).filter(User.id == user_id))
         user = result.scalars().first()
 
         if not user:
+            logger.error("Update failed: User with id=%s not found", user_id)
             raise HTTPException(status_code=404, detail="User not found")
 
         update_data = user_data.model_dump(exclude_unset=True)
 
-        if (
-            "profile_picture" in update_data
-            and update_data["profile_picture"] is not None
-        ):
+        if update_data.get("profile_picture") is not None:
             update_data["profile_picture"] = str(update_data["profile_picture"])
 
         for key, value in update_data.items():
@@ -102,17 +100,21 @@ class UserService:
             await self.db.commit()
         except IntegrityError as e:
             if "duplicate key value violates unique constraint" in str(e):
+                logger.error("Email %s already exists", update_data.get("email"))
                 raise HTTPException(status_code=400, detail="This email already exists")
             raise e
 
         await self.db.refresh(user)
+        logger.info("User with id=%s updated successfully", user_id)
         return user
 
     async def delete_user(self, user_id: int) -> Dict[str, str]:
+        logger.info("Deleting user with id=%s", user_id)
         result = await self.db.execute(select(User).filter(User.id == user_id))
         user = result.scalars().first()
 
         if not user:
+            logger.error("Delete failed: User with id=%s not found", user_id)
             raise HTTPException(status_code=404, detail="User not found")
 
         result_auth0 = await self.db.execute(
@@ -126,4 +128,5 @@ class UserService:
         await self.db.delete(user)
         await self.db.commit()
 
+        logger.info("User with id=%s deleted successfully", user_id)
         return {"detail": "User deleted successfully"}
