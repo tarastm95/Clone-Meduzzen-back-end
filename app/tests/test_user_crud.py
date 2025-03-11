@@ -157,9 +157,20 @@ async def test_update_existing_user(client, db_session):
     await db_session.commit()
     await db_session.refresh(test_user)
 
+    login_payload = {
+        "username": "test_update_existing_user@example.com",
+        "password": "secret",
+    }
+    login_response = await client.post("/auth/login", data=login_payload)
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
     update_data = {"name": "Updated User", "email": "updated@example.com", "age": 35}
 
-    response = await client.put(f"/users/{test_user.id}", json=update_data)
+    response = await client.put(
+        f"/users/{test_user.id}", json=update_data, headers=headers
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -167,7 +178,7 @@ async def test_update_existing_user(client, db_session):
     assert data["name"] == "Updated User"
     assert data["email"] == "updated@example.com"
     assert data["age"] == 35
-    assert data["bio"] in ["Updated User", "Old Bio"]
+    assert data["bio"] in ["Old Bio", "Updated User"]
     assert data["profilePicture"] is None
     assert data["friends"] == []
 
@@ -187,7 +198,13 @@ async def test_remove_user(client, db_session):
     await db_session.commit()
     await db_session.refresh(test_user)
 
-    response = await client.delete(f"/users/{test_user.id}")
+    login_payload = {"username": "test_remove_user@example.com", "password": "secret"}
+    login_response = await client.post("/auth/login", data=login_payload)
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = await client.delete(f"/users/{test_user.id}", headers=headers)
 
     assert response.status_code == 200
     data = response.json()

@@ -54,7 +54,9 @@ class UserService:
             select(User).filter(User.email == user_data.email)
         )
         if existing_user.scalars().first():
-            logger.warning("User creation failed: email %s already exists", user_data.email)
+            logger.warning(
+                "User creation failed: email %s already exists", user_data.email
+            )
             raise HTTPException(
                 status_code=400, detail="User with this email already exists"
             )
@@ -76,7 +78,11 @@ class UserService:
         await self.db.commit()
         await self.db.refresh(db_user)
 
-        logger.info("User with email=%s created successfully with id=%s", user_data.email, db_user.id)
+        logger.info(
+            "User with email=%s created successfully with id=%s",
+            user_data.email,
+            db_user.id,
+        )
         return db_user
 
     async def update_user(self, user_id: int, user_data: UserUpdateRequest) -> User:
@@ -89,6 +95,9 @@ class UserService:
             raise HTTPException(status_code=404, detail="User not found")
 
         update_data = user_data.model_dump(exclude_unset=True)
+
+        if "password" in update_data:
+            user.hashed_password = pwd_context.hash(update_data.pop("password"))
 
         if update_data.get("profile_picture") is not None:
             update_data["profile_picture"] = str(update_data["profile_picture"])
