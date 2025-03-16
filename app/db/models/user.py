@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 from app.db.timestamp_mixin import TimestampMixin
+from app.db.models.company import Company
 
 friends_association = Table(
     "friends",
@@ -47,3 +48,8 @@ class Auth0User(Base):
     sid = Column(String, nullable=True)
 
     user = relationship("User", backref="auth0_data", lazy="joined")
+
+
+User.companies = relationship(
+    Company, back_populates="owner", cascade="all, delete-orphan"
+)

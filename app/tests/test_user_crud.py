@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
@@ -6,18 +5,17 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import text
+from passlib.context import CryptContext
 
 from app.main import app
 from app.db.database import Base, get_db
 from app.db.models.user import User
-from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(
-    SQLALCHEMY_DATABASE_URL,
+    DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
@@ -75,13 +73,13 @@ async def test_read_users(client, db_session):
     await db_session.refresh(test_user)
 
     response = await client.get("/users/")
-
     assert response.status_code == 200
     data = response.json()
     assert "users" in data
     assert "total" in data
     assert isinstance(data["users"], list)
     assert data["total"] >= 1
+
     user = data["users"][0]
     assert user["id"] == test_user.id
     assert user["name"] == "Test User"
@@ -108,7 +106,6 @@ async def test_read_user(client, db_session):
     await db_session.refresh(test_user)
 
     response = await client.get(f"/users/{test_user.id}")
-
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == test_user.id
@@ -130,7 +127,6 @@ async def test_create_new_user(client):
     }
 
     response = await client.post("/users/", json=new_user_data)
-
     assert response.status_code == 200
     data = response.json()
     assert data["id"] is not None
@@ -167,11 +163,9 @@ async def test_update_existing_user(client, db_session):
     headers = {"Authorization": f"Bearer {token}"}
 
     update_data = {"name": "Updated User", "email": "updated@example.com", "age": 35}
-
     response = await client.put(
         f"/users/{test_user.id}", json=update_data, headers=headers
     )
-
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == test_user.id
@@ -181,6 +175,44 @@ async def test_update_existing_user(client, db_session):
     assert data["bio"] in ["Old Bio", "Updated User"]
     assert data["profilePicture"] is None
     assert data["friends"] == []
+
+
+@pytest.mark.asyncio
+async def test_read_users_with_pagination(client, db_session):
+    users = [
+        User(
+            name=f"User {i}",
+            email=f"user{i}@example.com",
+            age=25 + i,
+            hashed_password=pwd_context.hash("password"),
+            is_active=True,
+            bio=f"Bio {i}",
+            profile_picture=None,
+        )
+        for i in range(15)
+    ]
+    db_session.add_all(users)
+    await db_session.commit()
+
+    response = await client.get("/users/?skip=0&limit=10")
+    assert response.status_code == 200
+    data = response.json()
+    assert "users" in data
+    assert "total" in data
+    assert isinstance(data["users"], list)
+    assert data["total"] == 15
+    assert len(data["users"]) == 10
+    assert data["users"][0]["name"] == "User 0"
+    assert data["users"][-1]["name"] == "User 9"
+
+    response = await client.get("/users/?skip=10&limit=10")
+    assert response.status_code == 200
+    data = response.json()
+    assert "users" in data
+    assert "total" in data
+    assert len(data["users"]) == 5
+    assert data["users"][0]["name"] == "User 10"
+    assert data["users"][-1]["name"] == "User 14"
 
 
 @pytest.mark.asyncio
@@ -205,7 +237,6 @@ async def test_remove_user(client, db_session):
     headers = {"Authorization": f"Bearer {token}"}
 
     response = await client.delete(f"/users/{test_user.id}", headers=headers)
-
     assert response.status_code == 200
     data = response.json()
     assert data["detail"] == "User deleted successfully"
