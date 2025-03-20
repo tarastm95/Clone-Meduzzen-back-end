@@ -6,7 +6,9 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import db_settings
 from app.db.database import Base
-from app.db.models import user
+from app.db.models import user, company, company_invitation, company_member, company_membership_request
+
+
 
 config = context.config
 fileConfig(config.config_file_name)

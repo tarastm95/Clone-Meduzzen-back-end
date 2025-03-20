@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routers.database import postgres, redis
-from app.routers import health, user, auth0, auth, company
+from app.routers import health, user, auth0, auth, company, company_actions
 from app.core.logger import logger
 
 
@@ -41,5 +41,6 @@ app.include_router(user.router)
 app.include_router(auth0.router)
 app.include_router(auth.router)
 app.include_router(company.router)
+app.include_router(company_actions.router)
 
 logger.info("Backend API has been initialized.")
