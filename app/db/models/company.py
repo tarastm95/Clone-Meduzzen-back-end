@@ -4,11 +4,9 @@ from app.db.database import Base
 import enum
 from datetime import datetime, timezone
 
-
 class VisibilityEnum(enum.Enum):
     hidden = "hidden"
     visible = "visible"
-
 
 class Company(Base):
     __tablename__ = "companies"
@@ -20,9 +18,7 @@ class Company(Base):
     employees = Column(Integer, nullable=True)
     established = Column(Integer, nullable=True)
     services = Column(JSON, nullable=True)
-    visibility = Column(
-        Enum(VisibilityEnum), default=VisibilityEnum.hidden, nullable=False
-    )
+    visibility = Column(Enum(VisibilityEnum), default=VisibilityEnum.hidden, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(
@@ -32,3 +28,10 @@ class Company(Base):
     )
 
     owner = relationship("User", back_populates="companies")
+    # Налаштовуємо каскадне видалення для пов’язаних membership_requests
+    membership_requests = relationship(
+        "CompanyMembershipRequest",
+        back_populates="company",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )

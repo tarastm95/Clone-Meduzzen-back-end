@@ -9,23 +9,18 @@ from app.schemas.company import (
     CompanyResponse,
     CompaniesListResponse,
 )
-from app.core.logger import logger
-
+from app.core.logger import logger  # Припускаємо, що цей модуль існує
 
 class CompanyService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_companies(
-        self, skip: int = 0, limit: int = 10
-    ) -> CompaniesListResponse:
+    async def get_companies(self, skip: int = 0, limit: int = 10) -> CompaniesListResponse:
         result = await self.db.execute(select(Company).offset(skip).limit(limit))
         companies = result.scalars().all()
         total_result = await self.db.execute(select(Company))
         total = len(total_result.scalars().all())
-        company_responses = [
-            CompanyResponse.model_validate(company) for company in companies
-        ]
+        company_responses = [CompanyResponse.model_validate(company) for company in companies]
         return CompaniesListResponse(companies=company_responses, total=total)
 
     async def get_company(self, company_id: int) -> CompanyResponse:
@@ -35,9 +30,7 @@ class CompanyService:
             raise HTTPException(status_code=404, detail="Company not found")
         return CompanyResponse.model_validate(company)
 
-    async def create_company(
-        self, company_data: CompanyCreate, owner_id: int
-    ) -> CompanyResponse:
+    async def create_company(self, company_data: CompanyCreate, owner_id: int) -> CompanyResponse:
         existing_company = await self.db.execute(
             select(Company).filter(Company.name == company_data.name)
         )
@@ -51,11 +44,7 @@ class CompanyService:
             employees=company_data.employees,
             established=company_data.established,
             services=company_data.services,
-            visibility=(
-                company_data.visibility
-                if company_data.visibility
-                else VisibilityEnum.hidden
-            ),
+            visibility=(company_data.visibility if company_data.visibility else VisibilityEnum.hidden),
             owner_id=owner_id,
         )
 
@@ -69,17 +58,13 @@ class CompanyService:
 
         return CompanyResponse.model_validate(company)
 
-    async def update_company(
-        self, company_id: int, company_data: CompanyUpdate, current_user_id: int
-    ) -> CompanyResponse:
+    async def update_company(self, company_id: int, company_data: CompanyUpdate, current_user_id: int) -> CompanyResponse:
         result = await self.db.execute(select(Company).filter(Company.id == company_id))
         company = result.scalars().first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
         if company.owner_id != current_user_id:
-            raise HTTPException(
-                status_code=403, detail="Not authorized to update this company"
-            )
+            raise HTTPException(status_code=403, detail="Not authorized to update this company")
 
         update_data = company_data.model_dump(exclude_unset=True)
 
@@ -88,9 +73,7 @@ class CompanyService:
                 select(Company).filter(Company.name == update_data["name"])
             )
             if existing_company.scalars().first():
-                raise HTTPException(
-                    status_code=400, detail="Company name already exists"
-                )
+                raise HTTPException(status_code=400, detail="Company name already exists")
 
         for key, value in update_data.items():
             setattr(company, key, value)
@@ -110,9 +93,7 @@ class CompanyService:
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
         if company.owner_id != current_user_id:
-            raise HTTPException(
-                status_code=403, detail="Not authorized to delete this company"
-            )
+            raise HTTPException(status_code=403, detail="Not authorized to delete this company")
 
         await self.db.delete(company)
         await self.db.commit()

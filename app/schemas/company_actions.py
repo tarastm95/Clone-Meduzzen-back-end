@@ -1,6 +1,8 @@
+# app/schemas/company_actions.py
 from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
+from app.schemas.company import CompanyResponse  # Для вкладеного об’єкта компанії
 
 class InvitationStatus(str, Enum):
     pending = "pending"
@@ -42,6 +44,10 @@ class CompanyMembershipRequestResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+# Нова схема для відповіді з вкладеним об’єктом компанії
+class CompanyMembershipRequestDetailResponse(CompanyMembershipRequestResponse):
+    company: CompanyResponse
 
 # Схема для членства в компанії
 class CompanyMemberResponse(BaseModel):

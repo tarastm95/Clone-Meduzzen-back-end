@@ -16,7 +16,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Backend API", lifespan=lifespan)
 
-
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         logger.info(f"Incoming request: {request.method} {request.url}")
@@ -25,7 +24,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,6 +31,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(LoggingMiddleware)
 
 app.include_router(health.router)
 app.include_router(redis.router)

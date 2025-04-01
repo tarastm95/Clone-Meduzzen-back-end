@@ -145,3 +145,4 @@ async def decode_and_update_db(token_data: dict):
             logger.info("Created Auth0User record for user: %s", user.email)
         else:
             logger.info("Auth0User record already exists for user: %s", user.email)
+

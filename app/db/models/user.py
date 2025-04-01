@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from app.db.database import Base
 from app.db.timestamp_mixin import TimestampMixin
 from app.db.models.company import Company
+from app.db.models.company_membership_request import CompanyMembershipRequest
 
 friends_association = Table(
     "friends",
@@ -32,6 +33,14 @@ class User(TimestampMixin, Base):
         secondaryjoin=id == friends_association.c.friend_id,
         backref="user_friends",
         lazy="selectin",
+    )
+
+    # Додаємо зв’язок для запитів на членство
+    membership_requests = relationship(
+        "CompanyMembershipRequest",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 

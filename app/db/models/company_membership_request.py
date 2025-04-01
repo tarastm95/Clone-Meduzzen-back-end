@@ -14,12 +14,17 @@ class CompanyMembershipRequest(Base):
     __tablename__ = "company_membership_requests"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    # Додаємо ondelete="CASCADE" для зовнішнього ключа company_id
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(Enum(MembershipRequestStatus), default=MembershipRequestStatus.pending, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
-                        onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
 
-    company = relationship("Company", backref="membership_requests")
-    user = relationship("User", backref="membership_requests")
+    # Використовуємо back_populates замість backref
+    company = relationship("Company", back_populates="membership_requests")
+    user = relationship("User", back_populates="membership_requests")
