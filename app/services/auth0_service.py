@@ -32,7 +32,6 @@ def get_auth0_token():
     )
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.json())
-
     return response.json().get("access_token")
 
 
@@ -59,7 +58,7 @@ def validate_token(
             headers={"Authorization": f"Bearer {credentials.credentials}"},
         )
         if userinfo_response.status_code != 200:
-            raise HTTPException(status_code=401, detail="Failed to retrieve user data")
+            raise HTTPException(status_code=401, detail="error.unauthorized")
         userinfo = userinfo_response.json()
         return UserClaims(
             sub=userinfo.get("sub", ""),
@@ -71,7 +70,7 @@ def validate_token(
             permissions=[],
         )
     except (ExpiredSignatureError, JWTError, JWTClaimsError, JWSError) as error:
-        raise HTTPException(status_code=401, detail=str(error))
+        raise HTTPException(status_code=401, detail="error.auth.couldNotValidate")
 
 
 async def decode_and_update_db(token_data: dict):
@@ -145,4 +144,3 @@ async def decode_and_update_db(token_data: dict):
             logger.info("Created Auth0User record for user: %s", user.email)
         else:
             logger.info("Auth0User record already exists for user: %s", user.email)
-

@@ -9,7 +9,7 @@ from app.schemas.company import (
     CompanyResponse,
     CompaniesListResponse,
 )
-from app.core.logger import logger  # Припускаємо, що цей модуль існує
+from app.core.logger import logger
 
 class CompanyService:
     def __init__(self, db: AsyncSession):
@@ -27,7 +27,7 @@ class CompanyService:
         result = await self.db.execute(select(Company).filter(Company.id == company_id))
         company = result.scalars().first()
         if not company:
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         return CompanyResponse.model_validate(company)
 
     async def create_company(self, company_data: CompanyCreate, owner_id: int) -> CompanyResponse:
@@ -35,7 +35,7 @@ class CompanyService:
             select(Company).filter(Company.name == company_data.name)
         )
         if existing_company.scalars().first():
-            raise HTTPException(status_code=400, detail="Company name already exists")
+            raise HTTPException(status_code=400, detail="error.company.nameAlreadyExists")
 
         company = Company(
             name=company_data.name,
@@ -54,7 +54,7 @@ class CompanyService:
             await self.db.refresh(company)
         except IntegrityError:
             await self.db.rollback()
-            raise HTTPException(status_code=400, detail="Company name must be unique")
+            raise HTTPException(status_code=400, detail="error.company.nameMustBeUnique")
 
         return CompanyResponse.model_validate(company)
 
@@ -62,9 +62,9 @@ class CompanyService:
         result = await self.db.execute(select(Company).filter(Company.id == company_id))
         company = result.scalars().first()
         if not company:
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized to update this company")
+            raise HTTPException(status_code=403, detail="error.company.notAuthorizedUpdate")
 
         update_data = company_data.model_dump(exclude_unset=True)
 
@@ -73,7 +73,7 @@ class CompanyService:
                 select(Company).filter(Company.name == update_data["name"])
             )
             if existing_company.scalars().first():
-                raise HTTPException(status_code=400, detail="Company name already exists")
+                raise HTTPException(status_code=400, detail="error.company.nameAlreadyExists")
 
         for key, value in update_data.items():
             setattr(company, key, value)
@@ -83,7 +83,7 @@ class CompanyService:
             await self.db.refresh(company)
         except IntegrityError:
             await self.db.rollback()
-            raise HTTPException(status_code=400, detail="Company name must be unique")
+            raise HTTPException(status_code=400, detail="error.company.nameMustBeUnique")
 
         return CompanyResponse.model_validate(company)
 
@@ -91,9 +91,9 @@ class CompanyService:
         result = await self.db.execute(select(Company).filter(Company.id == company_id))
         company = result.scalars().first()
         if not company:
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized to delete this company")
+            raise HTTPException(status_code=403, detail="error.company.notAuthorizedDelete")
 
         await self.db.delete(company)
         await self.db.commit()

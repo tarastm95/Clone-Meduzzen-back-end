@@ -51,12 +51,12 @@ class AuthService:
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect email or password",
+                detail="error.auth.incorrectCredentials",
             )
         if not self.verify_password(password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect email or password",
+                detail="error.auth.incorrectCredentials",
             )
         return user
 
@@ -67,7 +67,7 @@ class AuthService:
     ) -> User:
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            detail="error.auth.couldNotValidate",
             headers={"WWW-Authenticate": "Bearer"},
         )
         try:

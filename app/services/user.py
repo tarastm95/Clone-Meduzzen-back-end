@@ -43,7 +43,8 @@ class UserService:
 
         if not user:
             logger.error("User with id=%s not found", user_id)
-            raise HTTPException(status_code=404, detail="User not found")
+            # Повертаємо ключ для перекладу: "user.notFound"
+            raise HTTPException(status_code=404, detail="error.user.notFound")
 
         logger.info("User with id=%s successfully fetched", user_id)
         return UserDetailResponse.model_validate(user)
@@ -57,8 +58,9 @@ class UserService:
             logger.warning(
                 "User creation failed: email %s already exists", user_data.email
             )
+            # Повертаємо ключ "user.emailAlreadyExists"
             raise HTTPException(
-                status_code=400, detail="User with this email already exists"
+                status_code=400, detail="error.user.emailAlreadyExists"
             )
 
         hashed_password = pwd_context.hash(user_data.password)
@@ -92,7 +94,7 @@ class UserService:
 
         if not user:
             logger.error("Update failed: User with id=%s not found", user_id)
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="error.user.notFound")
 
         update_data = user_data.model_dump(exclude_unset=True)
 
@@ -110,7 +112,8 @@ class UserService:
         except IntegrityError as e:
             if "duplicate key value violates unique constraint" in str(e):
                 logger.error("Email %s already exists", update_data.get("email"))
-                raise HTTPException(status_code=400, detail="This email already exists")
+                # Повертаємо ключ "user.emailMustBeUnique"
+                raise HTTPException(status_code=400, detail="error.user.emailMustBeUnique")
             raise e
 
         await self.db.refresh(user)
@@ -124,7 +127,7 @@ class UserService:
 
         if not user:
             logger.error("Delete failed: User with id=%s not found", user_id)
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="error.user.notFound")
 
         result_auth0 = await self.db.execute(
             select(Auth0User).filter(Auth0User.user_id == user_id)

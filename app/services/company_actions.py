@@ -8,11 +8,23 @@ from app.db.models.company_membership_request import CompanyMembershipRequest, M
 from app.db.models.company_member import CompanyMember
 from app.db.models.company import Company
 from app.db.models.user import User
-from app.core.logger import logger  # Переконайтеся, що logger налаштований правильно
+from app.core.logger import logger
 
 class CompanyActionsService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # Отримання компаній користувача (де користувач є власником)
+    async def get_user_companies(self, owner_id: int, skip: int = 0, limit: int = 10) -> tuple[list[Company], int]:
+        logger.info("get_user_companies: Fetching companies for owner %s with skip=%s and limit=%s", owner_id, skip, limit)
+        query = select(Company).filter(Company.owner_id == owner_id).offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        companies = result.scalars().all()
+        total_query = select(Company).filter(Company.owner_id == owner_id)
+        total_result = await self.db.execute(total_query)
+        total = len(total_result.scalars().all())
+        logger.info("get_user_companies: Found %s companies (total %s) for owner %s", len(companies), total, owner_id)
+        return companies, total
 
     # 1. Запрошення
     async def send_invitation(self, company_id: int, invited_user_id: int, current_user: User) -> CompanyInvitation:
@@ -21,10 +33,11 @@ class CompanyActionsService:
         company = result.scalars().first()
         if not company:
             logger.error("send_invitation: Company %s not found", company_id)
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user.id:
             logger.error("send_invitation: User %s is not owner of company %s", current_user.id, company_id)
-            raise HTTPException(status_code=403, detail="Not authorized to invite users to this company")
+            # Використовуємо загальний ключ "forbidden" для неавторизованої дії
+            raise HTTPException(status_code=403, detail="error.forbidden")
         existing = await self.db.execute(
             select(CompanyInvitation).filter(
                 CompanyInvitation.company_id == company_id,
@@ -34,7 +47,7 @@ class CompanyActionsService:
         )
         if existing.scalars().first():
             logger.error("send_invitation: Invitation already exists for user %s in company %s", invited_user_id, company_id)
-            raise HTTPException(status_code=400, detail="Invitation already sent")
+            raise HTTPException(status_code=400, detail="error.invitation.alreadySent")
         invitation = CompanyInvitation(
             company_id=company_id,
             invited_user_id=invited_user_id,
@@ -52,12 +65,12 @@ class CompanyActionsService:
         invitation = result.scalars().first()
         if not invitation:
             logger.error("cancel_invitation: Invitation %s not found", invitation_id)
-            raise HTTPException(status_code=404, detail="Invitation not found")
+            raise HTTPException(status_code=404, detail="error.invitation.notFound")
         result_company = await self.db.execute(select(Company).filter(Company.id == invitation.company_id))
         company = result_company.scalars().first()
         if company.owner_id != current_user.id:
             logger.error("cancel_invitation: User %s is not authorized to cancel invitation for company %s", current_user.id, invitation.company_id)
-            raise HTTPException(status_code=403, detail="Not authorized to cancel this invitation")
+            raise HTTPException(status_code=403, detail="error.invitation.notAuthorizedCancel")
         invitation.status = InvitationStatus.cancelled
         await self.db.commit()
         await self.db.refresh(invitation)
@@ -70,13 +83,13 @@ class CompanyActionsService:
         invitation = result.scalars().first()
         if not invitation:
             logger.error("accept_invitation: Invitation %s not found", invitation_id)
-            raise HTTPException(status_code=404, detail="Invitation not found")
+            raise HTTPException(status_code=404, detail="error.invitation.notFound")
         if invitation.invited_user_id != current_user.id:
             logger.error("accept_invitation: User %s is not authorized to accept invitation %s", current_user.id, invitation_id)
-            raise HTTPException(status_code=403, detail="Not authorized to accept this invitation")
+            raise HTTPException(status_code=403, detail="error.invitation.notAuthorizedAccept")
         if invitation.status != InvitationStatus.pending:
             logger.error("accept_invitation: Invitation %s is not pending", invitation_id)
-            raise HTTPException(status_code=400, detail="Invitation is not pending")
+            raise HTTPException(status_code=400, detail="error.invitation.notPending")
         result_member = await self.db.execute(
             select(CompanyMember).filter(
                 CompanyMember.company_id == invitation.company_id,
@@ -99,13 +112,13 @@ class CompanyActionsService:
         invitation = result.scalars().first()
         if not invitation:
             logger.error("decline_invitation: Invitation %s not found", invitation_id)
-            raise HTTPException(status_code=404, detail="Invitation not found")
+            raise HTTPException(status_code=404, detail="error.invitation.notFound")
         if invitation.invited_user_id != current_user.id:
             logger.error("decline_invitation: User %s is not authorized to decline invitation %s", current_user.id, invitation_id)
-            raise HTTPException(status_code=403, detail="Not authorized to decline this invitation")
+            raise HTTPException(status_code=403, detail="error.invitation.notAuthorizedDecline")
         if invitation.status != InvitationStatus.pending:
             logger.error("decline_invitation: Invitation %s is not pending", invitation_id)
-            raise HTTPException(status_code=400, detail="Invitation is not pending")
+            raise HTTPException(status_code=400, detail="error.invitation.notPending")
         invitation.status = InvitationStatus.declined
         await self.db.commit()
         await self.db.refresh(invitation)
@@ -119,10 +132,10 @@ class CompanyActionsService:
         company = result.scalars().first()
         if not company:
             logger.error("request_membership: Company %s not found", company_id)
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id == current_user.id:
             logger.error("request_membership: User %s is owner of company %s and cannot request membership", current_user.id, company_id)
-            raise HTTPException(status_code=400, detail="Company owner is already a member")
+            raise HTTPException(status_code=400, detail="error.membership.companyOwnerIsMember")
         result_member = await self.db.execute(
             select(CompanyMember).filter(
                 CompanyMember.company_id == company_id,
@@ -131,7 +144,7 @@ class CompanyActionsService:
         )
         if result_member.scalars().first():
             logger.error("request_membership: User %s is already a member of company %s", current_user.id, company_id)
-            raise HTTPException(status_code=400, detail="Already a member of the company")
+            raise HTTPException(status_code=400, detail="error.membership.alreadyMember")
         existing = await self.db.execute(
             select(CompanyMembershipRequest).filter(
                 CompanyMembershipRequest.company_id == company_id,
@@ -141,7 +154,7 @@ class CompanyActionsService:
         )
         if existing.scalars().first():
             logger.error("request_membership: Membership request already exists for user %s in company %s", current_user.id, company_id)
-            raise HTTPException(status_code=400, detail="Membership request already exists")
+            raise HTTPException(status_code=400, detail="error.membership.alreadyRequested")
         membership_request = CompanyMembershipRequest(
             company_id=company_id,
             user_id=current_user.id,
@@ -161,13 +174,13 @@ class CompanyActionsService:
         membership_request = result.scalars().first()
         if not membership_request:
             logger.error("cancel_membership_request: Membership request %s not found", request_id)
-            raise HTTPException(status_code=404, detail="Membership request not found")
+            raise HTTPException(status_code=404, detail="error.membership.notFound")
         if membership_request.user_id != current_user.id:
             logger.error("cancel_membership_request: User %s is not authorized to cancel membership request %s", current_user.id, request_id)
-            raise HTTPException(status_code=403, detail="Not authorized to cancel this request")
+            raise HTTPException(status_code=403, detail="error.membership.notAuthorizedCancel")
         if membership_request.status != MembershipRequestStatus.pending:
             logger.error("cancel_membership_request: Cannot cancel non-pending membership request %s", request_id)
-            raise HTTPException(status_code=400, detail="Cannot cancel a non-pending request")
+            raise HTTPException(status_code=400, detail="error.membership.cannotCancelNonPending")
         membership_request.status = MembershipRequestStatus.cancelled
         await self.db.commit()
         await self.db.refresh(membership_request)
@@ -182,22 +195,21 @@ class CompanyActionsService:
         membership_request = result.scalars().first()
         if not membership_request:
             logger.error("handle_membership_request: Membership request %s not found", request_id)
-            raise HTTPException(status_code=404, detail="Membership request not found")
-        # Додаткова перевірка: чи company_id не є None
+            raise HTTPException(status_code=404, detail="error.membership.notFound")
         if membership_request.company_id is None:
             logger.error("handle_membership_request: Membership request %s has null company_id", request_id)
-            raise HTTPException(status_code=500, detail="Internal error: Membership request has null company_id")
+            raise HTTPException(status_code=500, detail="error.membership.internalErrorNullCompanyId")
         result_company = await self.db.execute(select(Company).filter(Company.id == membership_request.company_id))
         company = result_company.scalars().first()
         if not company:
             logger.error("handle_membership_request: Company with id %s not found", membership_request.company_id)
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user.id:
             logger.error("handle_membership_request: User %s is not authorized to handle requests for company %s", current_user.id, membership_request.company_id)
-            raise HTTPException(status_code=403, detail="Not authorized to handle membership requests for this company")
+            raise HTTPException(status_code=403, detail="error.membership.notAuthorizedHandle")
         if membership_request.status != MembershipRequestStatus.pending:
             logger.error("handle_membership_request: Membership request %s is not pending", request_id)
-            raise HTTPException(status_code=400, detail="Membership request is not pending")
+            raise HTTPException(status_code=400, detail="error.membership.notPending")
         if action == "accept":
             result_member = await self.db.execute(
                 select(CompanyMember).filter(
@@ -214,7 +226,7 @@ class CompanyActionsService:
             membership_request.status = MembershipRequestStatus.declined
         else:
             logger.error("handle_membership_request: Invalid action '%s'", action)
-            raise HTTPException(status_code=400, detail="Invalid action")
+            raise HTTPException(status_code=400, detail="error.membership.invalidAction")
         await self.db.commit()
         await self.db.refresh(membership_request)
         logger.info("handle_membership_request: Membership request %s handled with status %s", request_id, membership_request.status)
@@ -227,10 +239,10 @@ class CompanyActionsService:
         company = result.scalars().first()
         if not company:
             logger.error("remove_member: Company %s not found", company_id)
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user.id:
             logger.error("remove_member: User %s is not authorized to remove members from company %s", current_user.id, company_id)
-            raise HTTPException(status_code=403, detail="Not authorized to remove members from this company")
+            raise HTTPException(status_code=403, detail="error.member.notAuthorizedRemove")
         result_member = await self.db.execute(
             select(CompanyMember).filter(
                 CompanyMember.company_id == company_id,
@@ -240,7 +252,7 @@ class CompanyActionsService:
         member = result_member.scalars().first()
         if not member:
             logger.error("remove_member: Member %s not found in company %s", member_user_id, company_id)
-            raise HTTPException(status_code=404, detail="Member not found in the company")
+            raise HTTPException(status_code=404, detail="error.member.notFound")
         await self.db.delete(member)
         await self.db.commit()
         logger.info("remove_member: Member %s removed from company %s", member_user_id, company_id)
@@ -257,13 +269,12 @@ class CompanyActionsService:
         member = result_member.scalars().first()
         if not member:
             logger.error("leave_company: User %s is not a member of company %s", current_user.id, company_id)
-            raise HTTPException(status_code=404, detail="You are not a member of this company")
+            raise HTTPException(status_code=404, detail="error.member.notAMember")
         await self.db.delete(member)
         await self.db.commit()
         logger.info("leave_company: User %s has left company %s", current_user.id, company_id)
         return {"detail": "You have left the company"}
 
-    # 4. Перегляд запитів та запрошень
     async def get_invitations_for_user(self, current_user: User) -> list[CompanyInvitation]:
         logger.info("get_invitations_for_user: Fetching invitations for user %s", current_user.id)
         result = await self.db.execute(
@@ -290,10 +301,10 @@ class CompanyActionsService:
         company = result.scalars().first()
         if not company:
             logger.error("get_invitations_for_company: Company %s not found", company_id)
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user.id:
             logger.error("get_invitations_for_company: User %s is not authorized to view invitations for company %s", current_user.id, company_id)
-            raise HTTPException(status_code=403, detail="Not authorized to view invitations for this company")
+            raise HTTPException(status_code=403, detail="error.forbidden")
         result_inv = await self.db.execute(
             select(CompanyInvitation).filter(CompanyInvitation.company_id == company_id)
         )
@@ -307,10 +318,10 @@ class CompanyActionsService:
         company = result.scalars().first()
         if not company:
             logger.error("get_membership_requests_for_company: Company %s not found", company_id)
-            raise HTTPException(status_code=404, detail="Company not found")
+            raise HTTPException(status_code=404, detail="error.company.notFound")
         if company.owner_id != current_user.id:
             logger.error("get_membership_requests_for_company: User %s is not authorized to view membership requests for company %s", current_user.id, company_id)
-            raise HTTPException(status_code=403, detail="Not authorized to view membership requests for this company")
+            raise HTTPException(status_code=403, detail="error.forbidden")
         result_req = await self.db.execute(
             select(CompanyMembershipRequest).filter(CompanyMembershipRequest.company_id == company_id)
         )
@@ -331,7 +342,6 @@ class CompanyActionsService:
         logger.info("get_company_members: Found %s members (total %s) for company %s", len(members), total, company_id)
         return members, total
 
-    # Додатковий метод для отримання компаній, в яких користувач є учасником (але не власником)
     async def get_companies_where_user_is_member(self, current_user: User) -> list:
         logger.info("get_companies_where_user_is_member: Fetching companies for user %s", current_user.id)
         result = await self.db.execute(
